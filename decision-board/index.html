@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Tapestry Decision Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a review-board register. Summary strip, sticky section index, then one column of numbered decision records with option tiles side by side. */
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --surface-2:#E9EDF1;
+  --ink:#14202C; --ink-2:#4B5966; --ink-3:#6B7884;
+  --line:#D3DAE1; --line-2:#B9C3CD;
+  --accent:#1D4F86; --accent-soft:#E3ECF6; --accent-ink:#FFFFFF;
+  --open:#5E6B78; --open-soft:#E6EAEE;
+  --lean:#8F5400; --lean-soft:#FBEFD9;
+  --agree:#1F6B45; --agree-soft:#DCF0E3;
+  --risk:#A3362B; --risk-soft:#F8E1DE;
+  --font-display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+  --radius:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E141A; --surface:#151D25; --surface-2:#1C2630;
+    --ink:#E5EBF1; --ink-2:#A6B3BF; --ink-3:#83909C;
+    --line:#29353F; --line-2:#3A4752;
+    --accent:#7EB3EA; --accent-soft:#18293B; --accent-ink:#0E141A;
+    --open:#9AA6B2; --open-soft:#212B35;
+    --lean:#E8AC50; --lean-soft:#332710;
+    --agree:#66C794; --agree-soft:#132E1F;
+    --risk:#EE8679; --risk-soft:#3A1D19;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E141A; --surface:#151D25; --surface-2:#1C2630;
+  --ink:#E5EBF1; --ink-2:#A6B3BF; --ink-3:#83909C;
+  --line:#29353F; --line-2:#3A4752;
+  --accent:#7EB3EA; --accent-soft:#18293B; --accent-ink:#0E141A;
+  --open:#9AA6B2; --open-soft:#212B35;
+  --lean:#E8AC50; --lean-soft:#332710;
+  --agree:#66C794; --agree-soft:#132E1F;
+  --risk:#EE8679; --risk-soft:#3A1D19;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--font-body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:28px 72px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.005em}
+h1{font-size:clamp(30px,4.4vw,42px);font-weight:700;line-height:1.1}
+h2{font-size:26px;font-weight:600;line-height:1.2}
+h3{font-size:19px;font-weight:600;line-height:1.25}
+p{margin:0}
+a{color:var(--accent)}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.lede{color:var(--ink-2);max-width:68ch}
+.muted{color:var(--ink-2)}
+.mono{font-family:var(--font-mono)}
+button,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Top summary */
+.top{display:grid;gap:18px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.top-row{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{display:flex;align-items:baseline;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.stat b{font-family:var(--font-display);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.stat span{font-size:13px;color:var(--ink-2)}
+.stat[data-k="leaning"] b{color:var(--lean)}
+.stat[data-k="agreed"] b{color:var(--agree)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--line-2);background:var(--surface);cursor:pointer;font-weight:500;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.sync{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--open)}
+.sync[data-mode="shared"]::before{background:var(--agree)}
+.sync[data-mode="local"]::before,.sync[data-mode="readonly"]::before{background:var(--lean)}
+.reviewers{font-size:13px;color:var(--ink-2)}
+.banner{padding:10px 14px;border-radius:var(--radius);background:var(--lean-soft);color:var(--ink);font-size:14px;border:1px solid var(--line)}
+
+/* Section index */
+nav.index{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-20px;padding-inline:20px}
+nav.index ul{list-style:none;margin:0;padding:10px 0;display:flex;flex-wrap:wrap;gap:4px 18px}
+nav.index a{color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500;padding:4px 0;display:inline-block}
+nav.index a:hover{color:var(--accent)}
+nav.index a .mono{color:var(--ink-3);font-size:12px;margin-right:6px}
+
+section{padding-top:44px;display:grid;gap:18px;scroll-margin-top:56px}
+.sec-head{display:grid;gap:6px}
+
+/* Overview */
+.pains{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 24px}
+.pain{padding:14px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:4px 12px;min-width:0}
+.pain .n{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);padding-top:3px}
+.pain strong{font-weight:600}
+.pain p{grid-column:2;color:var(--ink-2);font-size:14px}
+.subhead{font-family:var(--font-display);font-size:17px;font-weight:600;margin-top:10px}
+.flow-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:18px}
+.flow{display:flex;align-items:stretch;gap:8px;min-width:820px}
+.node{flex:1;border:1px solid var(--line-2);border-radius:var(--radius);padding:10px 12px;background:var(--bg);display:grid;gap:4px;align-content:start}
+.node b{font-family:var(--font-display);font-weight:600;font-size:15px}
+.node span{font-size:12.5px;color:var(--ink-2)}
+.node.core{border-color:var(--accent);background:var(--accent-soft)}
+.node.human{border-style:dashed}
+.arrow{align-self:center;color:var(--ink-3);font-family:var(--font-mono)}
+.flow-note{margin-top:12px;font-size:13px;color:var(--ink-2)}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.steps li{border-top:2px solid var(--accent);padding-top:8px;display:grid;gap:3px;min-width:0}
+.steps .k{font-family:var(--font-mono);font-size:12px;color:var(--accent)}
+.steps b{font-family:var(--font-display);font-size:16px;font-weight:600}
+.steps span{font-size:13px;color:var(--ink-2)}
+.promises{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 28px}
+.promises li{display:grid;grid-template-columns:20px 1fr;gap:8px;min-width:0}
+.promises li::before{content:"✓";color:var(--agree);font-weight:600}
+.sources{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.src{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;background:var(--surface);display:grid;gap:4px;min-width:0}
+.src b{font-weight:600}
+.src span{font-size:13.5px;color:var(--ink-2)}
+
+/* Tensions */
+.tension{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:16px 18px;display:grid;gap:12px}
+.tension-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.tag{font-family:var(--font-mono);font-size:12px;padding:2px 7px;border:1px solid var(--line-2);border-radius:4px;color:var(--ink-2)}
+.vs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.vs > div{background:var(--bg);border-radius:var(--radius);padding:10px 12px;min-width:0;display:grid;gap:4px}
+.vs p{font-size:14px}
+.suggest{font-size:14px}
+.suggest b{color:var(--accent)}
+
+/* Decisions */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);cursor:pointer;font-size:13.5px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip .c{font-family:var(--font-mono);font-size:12px;margin-left:6px;opacity:.75}
+.decs{display:grid;gap:18px}
+.dec{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:20px;display:grid;gap:14px;scroll-margin-top:60px}
+.dec-head{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.dec-id{font-family:var(--font-mono);font-size:15px;font-weight:500;padding:4px 9px;border:1px solid var(--line-2);border-radius:4px;line-height:1.3}
+.dec-titles{flex:1 1 280px;display:grid;gap:2px;min-width:0}
+.pill{font-family:var(--font-mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--open-soft);color:var(--open);white-space:nowrap}
+.pill[data-state="leaning"]{background:var(--lean-soft);color:var(--lean)}
+.pill[data-state="agreed"]{background:var(--agree-soft);color:var(--agree)}
+.dec-q{font-size:16.5px;font-weight:500;max-width:80ch}
+.dec-why{color:var(--ink-2);font-size:14.5px;max-width:86ch}
+.dec-why strong{color:var(--ink);font-weight:600}
+.dec-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-2);align-items:center}
+.dec-meta a{font-family:var(--font-mono);font-size:12px;text-decoration:none;border:1px solid var(--line-2);border-radius:4px;padding:1px 6px;color:var(--ink-2)}
+.dec-meta a:hover{border-color:var(--accent);color:var(--accent)}
+.dec-note{font-size:13.5px;padding:9px 12px;border-radius:var(--radius);background:var(--lean-soft)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.opt{border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface);cursor:pointer;min-width:0;position:relative}
+.opt:hover{border-color:var(--line-2)}
+.opt.mine{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.opt.locked{cursor:default}
+.opt-head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.opt-k{font-family:var(--font-mono);font-weight:500;font-size:13px;color:var(--ink-3)}
+.opt-name{font-family:var(--font-display);font-weight:600;font-size:16px;line-height:1.25;flex:1 1 120px}
+.rec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:1px 5px;white-space:nowrap}
+.outcome-tag{display:none;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 5px;white-space:nowrap}
+.opt.outcome[data-state="leaning"] .outcome-tag{display:inline-block;background:var(--lean-soft);color:var(--lean)}
+.opt.outcome[data-state="agreed"] .outcome-tag{display:inline-block;background:var(--agree-soft);color:var(--agree)}
+.opt-sum{font-size:14px;color:var(--ink-2)}
+.pc{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}
+.pc li{display:grid;grid-template-columns:14px 1fr;gap:6px}
+.pc li::before{font-family:var(--font-mono);font-weight:500}
+.pc .pro::before{content:"+";color:var(--agree)}
+.pc .con::before{content:"−";color:var(--risk)}
+.opt-foot{margin-top:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--line)}
+.pickers{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+.who{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 7px 2px 5px;border-radius:999px;background:var(--surface-2);color:var(--ink)}
+.who i{width:8px;height:8px;border-radius:50%;background:var(--ink-3);display:inline-block}
+.nopick{font-size:12px;color:var(--ink-3)}
+.pick{padding:5px 10px;border-radius:var(--radius);border:1px solid var(--line-2);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap}
+.pick:hover{border-color:var(--accent)}
+.opt.mine .pick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button:disabled,select:disabled,textarea:disabled{opacity:.55;cursor:not-allowed}
+.team{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding-top:12px;border-top:1px solid var(--line)}
+.team label,.notes label{font-size:13px;font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--radius);overflow:hidden}
+.seg button{padding:6px 11px;border:0;background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;border-right:1px solid var(--line-2)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"][data-state="open"]{background:var(--open-soft);color:var(--open)}
+.seg button[aria-pressed="true"][data-state="leaning"]{background:var(--lean-soft);color:var(--lean)}
+.seg button[aria-pressed="true"][data-state="agreed"]{background:var(--agree-soft);color:var(--agree)}
+select{padding:6px 8px;border-radius:var(--radius);border:1px solid var(--line-2);background:var(--surface);max-width:100%}
+.byline{font-size:12.5px;color:var(--ink-3)}
+.notes{display:grid;gap:8px}
+textarea{width:100%;min-height:64px;resize:vertical;padding:9px 11px;border-radius:var(--radius);border:1px solid var(--line-2);background:var(--bg);line-height:1.5;font-size:14px}
+.others{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.others li{font-size:14px;padding:8px 11px;border-radius:var(--radius);background:var(--surface-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.others li strong{font-weight:600;margin-right:6px}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--line)}
+th{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:500;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td b{font-family:var(--font-display);font-weight:600;font-size:15px}
+.now{display:inline-block;margin-left:6px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:3px;padding:1px 5px;vertical-align:2px}
+.lvl{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.lvl[data-l="High"]{background:var(--risk-soft);color:var(--risk)}
+.lvl[data-l="Medium"]{background:var(--lean-soft);color:var(--lean)}
+
+/* Questions */
+.qgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px}
+.qgroup{display:grid;gap:8px;align-content:start;min-width:0}
+.qgroup ol{margin:0;padding-left:22px;display:grid;gap:7px;font-size:14px}
+.qgroup ol li::marker{font-family:var(--font-mono);color:var(--ink-3);font-size:12px}
+
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-3);display:grid;gap:4px}
+
+/* Copy fallback + toast */
+.fallback{border:1px solid var(--line-2);border-radius:8px;background:var(--surface);padding:14px;display:grid;gap:10px}
+.fallback textarea{min-height:220px;font-family:var(--font-mono);font-size:12.5px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--radius);font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+
+@media (max-width:520px){
+  .wrap{padding-inline:16px}
+  nav.index{margin-inline:-16px;padding-inline:16px}
+  .dec{padding:16px}
+  h2{font-size:23px}
+}
+@media (prefers-reduced-motion:no-preference){
+  html{scroll-behavior:smooth}
+  .opt,.btn,.chip,.pick{transition:border-color .15s,background-color .15s}
+}
+/* Keep grid columns from growing to fit long content (e.g. the outcome dropdown) at phone width */
+section,.top,.decs,.dec,.tension,.notes{grid-template-columns:minmax(0,1fr)}
+.team select{flex:1 1 200px;min-width:0}
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Tapestry · RFP-to-Proposal Platform · Phase 0 · Draft for review</div>
+    <div class="top-row">
+      <div style="display:grid;gap:10px;min-width:0;flex:1 1 420px">
+        <h1>Tapestry Decision Board</h1>
+        <p class="lede">These are the eleven decisions we need to settle before building. Each one has its options, their trade-offs and a suggested direction. Record which option you prefer and add notes, and the rest of the review group will see them. A decision is final only once it is marked <b>Agreed</b>.</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="button" id="copyBtn">Copy decisions summary</button>
+      </div>
+    </div>
+    <div class="top-row" style="align-items:center">
+      <div class="stats" id="stats">
+        <div class="stat" data-k="open"><b id="nOpen">11</b><span>Open</span></div>
+        <div class="stat" data-k="leaning"><b id="nLeaning">0</b><span>Leaning</span></div>
+        <div class="stat" data-k="agreed"><b id="nAgreed">0</b><span>Agreed</span></div>
+      </div>
+      <div style="display:grid;gap:4px;justify-items:end;min-width:0">
+        <div class="sync" id="sync" data-mode="loading">Connecting to shared notes…</div>
+        <div class="reviewers" id="reviewers">No one has recorded a view yet.</div>
+      </div>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="fallback" id="fallback" hidden>
+      <p>Your browser blocked copying. Select all the text below and copy it yourself.</p>
+      <textarea id="fallbackText" readonly aria-label="Decisions summary"></textarea>
+      <div><button class="btn" type="button" id="fallbackClose">Close</button></div>
+    </div>
+  </header>
+
+  <nav class="index" aria-label="Sections">
+    <ul>
+      <li><a href="#overview"><span class="mono">01</span>Overview</a></li>
+      <li><a href="#tensions"><span class="mono">02</span>Tensions</a></li>
+      <li><a href="#decisions"><span class="mono">03</span>Decisions</a></li>
+      <li><a href="#roadmap"><span class="mono">04</span>Roadmap</a></li>
+      <li><a href="#risks"><span class="mono">05</span>Risks</a></li>
+      <li><a href="#questions"><span class="mono">06</span>Questions for Tapestry</a></li>
+    </ul>
+  </nav>
+
+  <!-- 01 Overview -->
+  <section id="overview">
+    <div class="sec-head">
+      <div class="eyebrow">01 · Overview</div>
+      <h2>What we're building and why</h2>
+      <p class="lede">Tapestry Solutions answers large, technical government and defense RFPs (DoD, Boeing and other defense contractors), often with only a few weeks to respond. The knowledge needed for the answers already exists, but it is scattered, unversioned and hard to trust.</p>
+    </div>
+
+    <div class="pains">
+      <div class="pain"><span class="n">P1</span><strong>Knowledge is scattered</strong><p>SharePoint, Confluence, past proposals and inboxes. Nobody knows which version is latest or approved.</p></div>
+      <div class="pain"><span class="n">P2</span><strong>Work gets repeated</strong><p>Approved answers can't be found, so SMEs write them again from scratch.</p></div>
+      <div class="pain"><span class="n">P3</span><strong>Answers don't match</strong><p>Proposals contradict each other, which is a credibility and compliance risk for defense customers.</p></div>
+      <div class="pain"><span class="n">P4</span><strong>SMEs are bottlenecks</strong><p>The same questions go to the same few engineers on every bid.</p></div>
+      <div class="pain"><span class="n">P5</span><strong>Deadlines are unforgiving</strong><p>A late submission can lose a multi-million-dollar contract outright.</p></div>
+      <div class="pain"><span class="n">P6</span><strong>There is no approval trail</strong><p>Content gets reused on the basis of "I think this is right", with no record of approval.</p></div>
+    </div>
+
+    <h3 class="subhead">The approach</h3>
+    <div class="flow-wrap" role="img" aria-label="Flow: scattered sources are ingested and checked into a trusted knowledge library; the proposal workflow draws governed evidence from it; people review; the result is exported as an editable document.">
+      <div class="flow">
+        <div class="node"><b>Scattered sources</b><span>Team sites, wikis, past proposals, policies</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Ingest &amp; check</b><span>Extract, de-duplicate, record owner, version and classification</span></div>
+        <div class="arrow">→</div>
+        <div class="node core"><b>Trusted knowledge library</b><span>Approved, current, access-controlled, audited</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Proposal workflow</b><span>Understand RFP → plan → find evidence → draft</span></div>
+        <div class="arrow">→</div>
+        <div class="node human"><b>People review</b><span>SMEs fill gaps; reviewers approve</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Editable export</b><span>Agreed template plus requirements checklist</span></div>
+      </div>
+      <p class="flow-note">Approved proposal text goes back into the library only after its owner reviews it. Drafts never become "knowledge" automatically.</p>
+    </div>
+
+    <h3 class="subhead">The proposal journey</h3>
+    <ol class="steps">
+      <li><span class="k">1</span><b>Upload</b><span>RFP and attachments. Unreadable files are rejected with a reason.</span></li>
+      <li><span class="k">2</span><b>Understand</b><span>Requirements, deadlines and instructions, with page references. People can correct errors.</span></li>
+      <li><span class="k">3</span><b>Plan</b><span>Outline and compliance matrix. Gaps and conflicts are flagged.</span></li>
+      <li><span class="k">4</span><b>Find evidence</b><span>Approved, current, permitted content only.</span></li>
+      <li><span class="k">5</span><b>Draft</b><span>Every claim linked to a source. Missing facts become questions.</span></li>
+      <li><span class="k">6</span><b>Review</b><span>Edit, regenerate, approve. Versions are kept.</span></li>
+      <li><span class="k">7</span><b>Export</b><span>Editable document. A person submits it.</span></li>
+    </ol>
+
+    <h3 class="subhead">Promises the product keeps</h3>
+    <ul class="promises">
+      <li>Every material claim links to its source document and version.</li>
+      <li>Only approved, current content the user may see reaches a draft.</li>
+      <li>Nothing is invented. Pricing, staffing, commitments and certifications come from people.</li>
+      <li>People approve everything, and nothing is submitted automatically.</li>
+      <li>RFPs and source files are treated as untrusted input.</li>
+      <li>Every run is bounded by limits and can be audited.</li>
+    </ul>
+
+    <h3 class="subhead">Sources reviewed</h3>
+    <div class="sources">
+      <div class="src"><span class="eyebrow">July 2026</span><b>Proposal &amp; Knowledge Management Platform Evaluation</b><span>Pain points, build/buy/hybrid options, POC anchor (retrieval first), discovery questions, ITAR/CUI concerns.</span></div>
+      <div class="src"><span class="eyebrow">29 Sept 2026</span><b>RFP-to-Proposal Project Brief</b><span>Proposal generation as the outcome, 7-step workflow, acceptance measures, agent/RAG/MCP design, tool contracts.</span></div>
+    </div>
+  </section>
+
+  <!-- 02 Tensions -->
+  <section id="tensions">
+    <div class="sec-head">
+      <div class="eyebrow">02 · Tensions</div>
+      <h2>Where the two documents disagree</h2>
+      <p class="lede">These are the conflicts between the July evaluation and the September brief. Each one feeds a decision below.</p>
+    </div>
+
+    <article class="tension">
+      <div class="tension-head"><span class="tag">C1</span><h3>What the POC should prove</h3></div>
+      <div class="vs">
+        <div><span class="eyebrow">July evaluation</span><p>Lead with retrieval and grounded Q&amp;A, not proposal generation. Small curated set, about four weeks.</p></div>
+        <div><span class="eyebrow">29 Sept brief</span><p>Prove the complete workflow end to end, then add a bounded agent, an MCP adapter and a measured comparison.</p></div>
+      </div>
+      <p class="suggest"><b>Suggestion:</b> Decide explicitly. A thin end-to-end slice keeps the proposal value visible without building everything at once. See <a href="#d1">D1</a>.</p>
+    </article>
+
+    <article class="tension">
+      <div class="tension-head"><span class="tag">C2</span><h3>Build, buy or hybrid</h3></div>
+      <div class="vs">
+        <div><span class="eyebrow">July evaluation</span><p>Recommends a hybrid: a commercial or light workspace on top of a knowledge layer that Tapestry controls.</p></div>
+        <div><span class="eyebrow">29 Sept brief</span><p>Assumes a fully custom build (Angular screens, Spring Boot workflow).</p></div>
+      </div>
+      <p class="suggest"><b>Suggestion:</b> Record the decision and its reasons, because Tapestry will likely ask why we aren't using an existing RFP tool. See <a href="#d2">D2</a>.</p>
+    </article>
+
+    <article class="tension">
+      <div class="tension-head"><span class="tag">C3</span><h3>"Confidence score" on answers</h3></div>
+      <div class="vs">
+        <div><span class="eyebrow">July evaluation</span><p>Every answer carries citations, approval status and a confidence score.</p></div>
+        <div><span class="eyebrow">29 Sept brief</span><p>A model-based verifier gives a signal but can't certify accuracy or compliance.</p></div>
+      </div>
+      <p class="suggest"><b>Suggestion:</b> Drop the numeric confidence score, which encourages over-trust. Show evidence indicators instead: cited or uncited, approval status, source age, conflicts found, and gaps.</p>
+    </article>
+
+    <article class="tension">
+      <div class="tension-head"><span class="tag">C4</span><h3>Writing approved drafts back to the library</h3></div>
+      <div class="vs">
+        <div><span class="eyebrow">July evaluation</span><p>SME-approved drafts are written back into the Knowledge Fabric so it improves with each proposal.</p></div>
+        <div><span class="eyebrow">29 Sept brief</span><p>Keep generated drafts separate from approved knowledge. Reuse only after the owner approves.</p></div>
+      </div>
+      <p class="suggest"><b>Suggestion:</b> Define a promotion flow: proposal text is <i>nominated</i>, then <i>owner-reviewed</i>, then becomes <i>approved library content</i>, with lineage kept. This connects to <a href="#d9">D9</a>.</p>
+    </article>
+  </section>
+
+  <!-- 03 Decisions -->
+  <section id="decisions">
+    <div class="sec-head">
+      <div class="eyebrow">03 · Decisions</div>
+      <h2>Decisions to settle in Phase 0</h2>
+      <p class="lede">Choose the option you prefer on each card and add a note if you want to explain why. Use <b>Team status</b> once the group is leaning toward an option or has agreed. The suggested option is only a proposal.</p>
+    </div>
+    <div class="toolbar" role="group" aria-label="Filter decisions by status">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">All<span class="c" id="fAll">11</span></button>
+      <button class="chip" type="button" data-filter="open" aria-pressed="false">Open<span class="c" id="fOpen">11</span></button>
+      <button class="chip" type="button" data-filter="leaning" aria-pressed="false">Leaning<span class="c" id="fLeaning">0</span></button>
+      <button class="chip" type="button" data-filter="agreed" aria-pressed="false">Agreed<span class="c" id="fAgreed">0</span></button>
+    </div>
+    <div class="decs" id="decs"></div>
+  </section>
+
+  <!-- 04 Roadmap -->
+  <section id="roadmap">
+    <div class="sec-head">
+      <div class="eyebrow">04 · Roadmap</div>
+      <h2>Suggested phasing</h2>
+      <p class="lede">Durations are indicative only. They depend on access approvals and on D1.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Purpose</th><th>In scope</th><th>Not yet</th></tr></thead>
+        <tbody>
+          <tr><td><b>0 · Define</b><span class="now">Now</span></td><td>Agree what and why</td><td>Goal, requirements, user and application flows, governance, architecture, UI preview, tech-stack decision, baseline study, golden evaluation set, safe sample data</td><td>Any production build</td></tr>
+          <tr><td><b>1 · POC</b><br><span class="muted">~4–6 weeks</span></td><td>Prove the workflow on safe data</td><td>Per D1 (suggested thin slice): 1 RFP, 2 sources (~100–200 docs), import-based ingestion, metadata and approval, change handling, governed retrieval, extraction, compliance matrix, 2–3 grounded sections, one review stage, DOCX export, traps that prove exclusions</td><td>Live connectors (unless approved early), full permission sync, agent loop, MCP, multi-stage reviews</td></tr>
+          <tr><td><b>2 · Pilot</b></td><td>Prove it on a live proposal</td><td>Live connectors, curated library, amendments, colour-team review stages (Pink / Red / Gold), bounded agent loop if the evaluation shows it helps</td><td>Organisation-wide rollout</td></tr>
+          <tr><td><b>3 · First release</b></td><td>Wider use</td><td>More sources, full permission sync, content-operations model, admin, dashboards, MCP adapter if needed</td><td>Other consumers of the library</td></tr>
+          <tr><td><b>Later</b></td><td>Extend the platform</td><td>Engineering assistant, onboarding, compliance search, specialised agents, fine-tuning if justified</td><td>n/a</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 05 Risks -->
+  <section id="risks">
+    <div class="sec-head">
+      <div class="eyebrow">05 · Risks</div>
+      <h2>Key risks and mitigations</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Source access or security approval is slow and blocks the POC</td><td><span class="lvl" data-l="High">High</span></td><td><span class="lvl" data-l="High">High</span></td><td>Public or synthetic RFPs and exported documents. Request access in week 1. Controlled import before live connectors (D7).</td></tr>
+          <tr><td>CUI is confirmed late and forces re-platforming</td><td><span class="lvl" data-l="Medium">Medium</span></td><td><span class="lvl" data-l="High">High</span></td><td>Pick services that can run inside a compliant boundary. Keep the model and embedding provider swappable (D3, D11).</td></tr>
+          <tr><td>Retrieval quality on long technical documents is poor</td><td><span class="lvl" data-l="Medium">Medium</span></td><td><span class="lvl" data-l="High">High</span></td><td>Hybrid keyword + semantic search, structure-aware chunking, golden-set evaluation, fixed-pipeline baseline first.</td></tr>
+          <tr><td>Reviewers over-trust AI drafts</td><td><span class="lvl" data-l="Medium">Medium</span></td><td><span class="lvl" data-l="High">High</span></td><td>Evidence indicators instead of confidence scores, a mandatory review state, clear gap flags.</td></tr>
+          <tr><td>"Platform" ambitions cause scope creep</td><td><span class="lvl" data-l="High">High</span></td><td><span class="lvl" data-l="Medium">Medium</span></td><td>Strict phase gates. Other consumers of the library only after the first release.</td></tr>
+          <tr><td>Prompt injection through RFP or source content</td><td><span class="lvl" data-l="Medium">Medium</span></td><td><span class="lvl" data-l="High">High</span></td><td>Treat input as untrusted, enforce access in services, allow-list tools, include injection cases in the golden set.</td></tr>
+          <tr><td>Costs grow with 100+ page RFPs</td><td><span class="lvl" data-l="Medium">Medium</span></td><td><span class="lvl" data-l="Medium">Medium</span></td><td>Per-run budgets, caching, usage tracking from day one.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 06 Questions -->
+  <section id="questions">
+    <div class="sec-head">
+      <div class="eyebrow">06 · Questions for Tapestry</div>
+      <h2>What we need Tapestry to tell us</h2>
+      <p class="lede">Combined from both documents. Several decisions above can't be closed until these are answered.</p>
+    </div>
+    <div class="qgroups">
+      <div class="qgroup"><h3>Outcome &amp; scope</h3><ol>
+        <li>What output is expected: a compliance matrix, section drafts, a full proposal or all three? Which template and formats?</li>
+        <li>Which RFP types and formats matter first (scanned PDFs, tables, appendices, amendments)?</li>
+        <li>What counts as success for leadership: time saved, more bids, win rate or SME load?</li>
+        <li>How many RFPs a quarter, with what turnaround? How much time goes on searching versus writing?</li>
+        <li>Has a deadline been missed or nearly missed because of content problems?</li>
+      </ol></div>
+      <div class="qgroup"><h3>Content &amp; ownership</h3><ol start="6">
+        <li>Which repositories hold the most valuable reusable content, and who owns each?</li>
+        <li>Who decides approval, validity, classification and access? Is there a sign-off process already?</li>
+        <li>Which facts are reusable, and which must be supplied per pursuit (pricing, staffing, commitments)?</li>
+        <li>Who resolves duplicates, contradictions and missing metadata, now and after go-live?</li>
+        <li>Is there a curated answer library or boilerplate set today?</li>
+      </ol></div>
+      <div class="qgroup"><h3>Security &amp; access</h3><ol start="11">
+        <li>Is any content ITAR-controlled or CUI? What is the classification scheme?</li>
+        <li>Which hosting and model-provider boundaries are allowed (commercial, FedRAMP High / IL4–5, GovCloud, on-prem)?</li>
+        <li>Who signs off security for the POC, and how long does it take?</li>
+        <li>What access is possible per source: connector/API, export or manual import?</li>
+        <li>Which identity provider is in use?</li>
+      </ol></div>
+      <div class="qgroup"><h3>Process</h3><ol start="16">
+        <li>Who reviews technical, legal, security and commercial claims? What are the review stages and turnaround?</li>
+        <li>Can we have 1–3 permitted past RFPs with their final proposals, for the baseline and the golden set?</li>
+      </ol></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Draft for internal review. Nothing on this board is decided until it is marked Agreed.</span>
+    <span>Companion documents: <a href="../PRODUCT.md">PRODUCT.md</a> (plain-language overview) and <a href="../docs/PRODUCT-ANALYSIS.md">docs/PRODUCT-ANALYSIS.md</a> (detailed review).</span>
+    <span>This is the local copy. Picks and notes made here stay in this browser. To record views the whole group can see, use the <a href="https://claude.ai/artifact/B2KsV461LrfZErPz7vqaMh" target="_blank" rel="noopener">shared online board</a>.</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+
+const DECISIONS = [
+  { id:"D1", group:"Direction", title:"POC direction",
+    question:"How much should the first proof of concept try to prove?",
+    why:"The July and September documents disagree. This choice sets the POC's length and effort, and what Tapestry sees first.",
+    deps:["D3","D7"], rec:"A",
+    options:[
+      {k:"A", name:"Thin end-to-end slice", sum:"One permitted RFP and two sources (~100–200 docs), taken through extraction, compliance matrix, governed retrieval, 2–3 grounded sections, one review stage and DOCX export. Includes an outdated and an unapproved document to prove they are excluded.",
+        pros:["Shows the proposal value Tapestry asked for","Still proves the knowledge foundation and governance","Fits roughly 4–6 weeks"],
+        cons:["Each step is shallow","More moving parts than retrieval alone"]},
+      {k:"B", name:"Retrieval & grounded Q&A first", sum:"The July plan: governed library plus question-answering with citations. Drafting moves to phase 2.",
+        pros:["Fastest and lowest risk","Retrieval quality is what everything else depends on","No change to Tapestry's workflow"],
+        cons:["Doesn't show drafting, which the Sept brief names as the outcome","A weaker demo for budget holders"]},
+      {k:"C", name:"Full September brief", sum:"Everything in the POC: full workflow, bounded agent loop, MCP adapter, and a fixed-pipeline vs agent comparison.",
+        pros:["Tells the complete story","Answers whether an agent adds value"],
+        cons:["Unrealistic in ~4 weeks","High risk that everything ends up half-built","Blocked if source access is slow"]}
+    ]},
+  { id:"D2", group:"Direction", title:"Solution path",
+    question:"Build it, buy a commercial RFP tool, or combine the two?",
+    why:"July recommends a hybrid while September assumes a custom build. Tapestry may ask why we aren't using an existing RFP tool.",
+    deps:["D3"], rec:"C",
+    options:[
+      {k:"A", name:"Custom-built", sum:"Build both the knowledge library and the proposal workspace ourselves.",
+        pros:["Full control of data, access and citations","Best fit for long technical RFPs","Reusable beyond proposals"],
+        cons:["Slowest to first value","Highest engineering effort"]},
+      {k:"B", name:"Commercial RFP platform", sum:"Adopt an existing tool such as Responsive (RFPIO) or Loopio.",
+        pros:["Fastest to stand up","Low engineering effort"],
+        cons:["Weak fit for 100+ page technical DoD RFPs","Vendor controls where data is hosted","Content library lock-in"]},
+      {k:"C", name:"Hybrid: own the library, replaceable workspace", sum:"Keep the knowledge library custom and inside Tapestry's control. Build a light drafting workspace for the POC and evaluate commercial workspaces before the pilot.",
+        pros:["Sensitive data stays inside Tapestry's boundary","Quick to prove","Keeps vendor options open"],
+        cons:["Integration work between workspace and library","Two pieces to govern"]}
+    ]},
+  { id:"D3", group:"Trust & security", title:"Security posture",
+    question:"Until Tapestry confirms whether content is ITAR or CUI, what security posture should requirements and the tech stack assume?",
+    why:"Some Tapestry content may be ITAR-controlled or CUI. That decides where data can be hosted and which model and OCR services we can use. This decision is the one most likely to overturn the others.",
+    deps:[], rec:"A",
+    options:[
+      {k:"A", name:"CUI-ready design, POC on safe data", sum:"Choose services that can run inside a FedRAMP High, IL4–5 or GovCloud-type boundary, and keep model and embedding providers swappable. Run the POC on public or synthetic RFPs and non-sensitive documents.",
+        pros:["Not blocked waiting for security approvals","No re-platforming if CUI is confirmed","Shows the security team we planned for it"],
+        cons:["Narrower choice of services","Some extra design effort up front"]},
+      {k:"B", name:"Commercial cloud is fine", sum:"Standard cloud regions and AI services. Revisit only if CUI is confirmed.",
+        pros:["Widest choice of services and models","Fastest setup"],
+        cons:["Possible rework if CUI is confirmed","Security may object late"]},
+      {k:"C", name:"Strict on-prem / self-hosted", sum:"No external model APIs. Language and embedding models run on Tapestry infrastructure.",
+        pros:["Maximum data control"],
+        cons:["Heavy infrastructure and operations","Lower model quality for the cost","Slowest to start"]}
+    ]},
+  { id:"D4", group:"Ways of working", title:"Audience for Phase 0 deliverables",
+    question:"Who are the Phase 0 documents mainly written for right now?",
+    why:"This sets the tone and depth of everything produced in this phase, and decides whether the documents can go to Tapestry as they are.",
+    deps:[], rec:"B",
+    note:"Suggested: write for the internal team now, then produce a client-ready version once decisions are aligned.",
+    options:[
+      {k:"A", name:"Client engagement", sum:"Written for Tapestry stakeholders: neutral tone, decision records for them to sign off, and discovery-ready questions.",
+        pros:["Ready to share","Builds client confidence"],
+        cons:["Less candid about our own risks","More polish needed per document"]},
+      {k:"B", name:"Internal team / AI CoE", sum:"Written for our own team to align before talking to Tapestry. Candid about trade-offs.",
+        pros:["Fast","Honest about risk","Good base for a client version"],
+        cons:["Needs a rewrite before sharing with Tapestry"]},
+      {k:"C", name:"Personal upskilling build", sum:"Mainly for learning, with a practice build. Client quality only where it costs little.",
+        pros:["Most freedom to learn"],
+        cons:["Mixes learning with client scope, a problem already visible in the Sept brief"]}
+    ]},
+  { id:"D5", group:"Direction", title:"What the first version produces",
+    question:"What should v1 produce for the proposal team?",
+    why:"Export, templates and review effort grow with the output. A full proposal also needs pricing, staffing and formatting, which makes it much harder.",
+    deps:["D1"], rec:"B",
+    options:[
+      {k:"A", name:"Compliance matrix only", sum:"A requirements checklist mapped to outline sections, with status per item.",
+        pros:["Quick win for proposal managers","Low risk"],
+        cons:["No drafting","Makes little use of the library"]},
+      {k:"B", name:"Matrix + section drafts", sum:"The compliance matrix plus grounded drafts for selected sections, such as technical approach, security and past performance.",
+        pros:["Shows drafting value with controlled risk","Matches the agreed acceptance measures"],
+        cons:["Template work needed for export"]},
+      {k:"C", name:"Full proposal draft", sum:"A complete draft proposal document.",
+        pros:["Biggest headline"],
+        cons:["Needs pricing, staffing, formatting and page limits","Heavy review burden","Higher risk of unsupported claims"]},
+      {k:"D", name:"All three", sum:"Matrix, section drafts and full proposal.",
+        pros:["Complete"],
+        cons:["Largest scope","Same problems as C"]}
+    ]},
+  { id:"D6", group:"Product shape", title:"Orchestration approach",
+    question:"Should drafting run as a fixed pipeline, an agent, or both in sequence?",
+    why:"Agents add flexibility but also cost, latency and unpredictability. The September brief already says agents should prove their value against a fixed baseline.",
+    deps:["D1"], rec:"A",
+    options:[
+      {k:"A", name:"Fixed pipeline first, agent after evaluation", sum:"Build a predictable pipeline, then add a bounded search-inspect-revise agent where measurements show it helps.",
+        pros:["Predictable, testable baseline","Agent added only where it measurably helps","Matches §17 of the Sept brief"],
+        cons:["The agent demo comes later"]},
+      {k:"B", name:"Agent-first", sum:"An orchestrating agent drives research and drafting from day one.",
+        pros:["Flexible research and revision from the start"],
+        cons:["Harder to test and debug","No baseline to compare against","Less predictable cost and latency"]},
+      {k:"C", name:"Fixed pipeline only", sum:"No agent in scope. Deterministic steps with model calls.",
+        pros:["Simplest to build and govern"],
+        cons:["No revise loop for hard requirements","Misses the learning goal"]}
+    ]},
+  { id:"D7", group:"Sources & measures", title:"First sources and ingestion",
+    question:"Which sources come first, and how do we get content out of them?",
+    why:"Source access is the most likely blocker. Live connectors need security approvals and permission mapping.",
+    deps:["D3"], rec:"A",
+    options:[
+      {k:"A", name:"Controlled import", sum:"Exported past proposals plus a policy or standards set, loaded through a controlled import. Change handling is shown by re-importing a new version.",
+        pros:["Not blocked by connector approvals","Easy to curate a safe set"],
+        cons:["Doesn't prove live sync"]},
+      {k:"B", name:"Live connectors", sum:"Connect directly to SharePoint and Confluence.",
+        pros:["Realistic","Proves sync and deletion handling"],
+        cons:["Needs security approval and API access","Permission mapping effort"]},
+      {k:"C", name:"Mixed: one import + one connector", sum:"Past proposals by import, plus one live connector if access arrives in time.",
+        pros:["Proves both paths"],
+        cons:["Depends on one approval arriving on schedule"]}
+    ]},
+  { id:"D8", group:"Trust & security", title:"POC access-control model",
+    question:"How should the POC decide who may see which content?",
+    why:"Permission-aware retrieval is a security feature. Copying every source's per-document permissions is a project of its own, and mistakes there become security incidents.",
+    deps:["D3","D7"], rec:"A",
+    options:[
+      {k:"A", name:"Classification + group access", sum:"The library gives each document a classification and a list of allowed groups, and checks them on every search and read.",
+        pros:["Simple and testable","Proves governance","Works with imported content"],
+        cons:["Doesn't mirror source permissions exactly"]},
+      {k:"B", name:"Full source permission sync", sum:"Mirror each document's permissions from SharePoint and Confluence.",
+        pros:["Matches source systems exactly"],
+        cons:["Complex: groups, inheritance, sharing links","Errors are security incidents","Needs live connectors"]},
+      {k:"C", name:"Single trusted POC group", sum:"Everyone in the POC can see all POC content.",
+        pros:["Simplest"],
+        cons:["Doesn't prove access control, which the acceptance measures require"]}
+    ]},
+  { id:"D9", group:"Product shape", title:"Content model",
+    question:"Should the library hold raw documents only, or also a curated set of reusable answers?",
+    why:"Proposal teams reuse curated assets such as approved answers, past performance and resumes, not just raw documents. The content model shapes how consistent answers are.",
+    deps:[], rec:"B",
+    options:[
+      {k:"A", name:"Raw documents only", sum:"Index chunks of the source documents as they are.",
+        pros:["Least curation effort"],
+        cons:["Noisier retrieval","Inconsistent answers persist"]},
+      {k:"B", name:"Raw documents + curated library", sum:"Raw documents plus owner-approved answer blocks, past performance, resumes and certifications, each with its own lifecycle.",
+        pros:["Consistent, approved answers","Matches how proposal teams work","A natural home for promoted content"],
+        cons:["Owners must curate","Extra lifecycle to build"]},
+      {k:"C", name:"Curated library only", sum:"Only curated answer blocks, like a commercial answer bank.",
+        pros:["Highest consistency"],
+        cons:["Large curation effort up front","Loses long-tail knowledge in source documents"]}
+    ]},
+  { id:"D10", group:"Sources & measures", title:"Success metrics and targets",
+    question:"How do we set the bar the POC must clear?",
+    why:"A claim that the POC is faster needs a measured before. Targets must be agreed before the POC readout.",
+    deps:[], rec:"A",
+    options:[
+      {k:"A", name:"Baseline study first", sum:"Measure 2–3 recent RFPs: time to extract requirements, time to a first reviewable draft, SME hours and rework. Then set numeric targets.",
+        pros:["Credible before/after numbers","Grounds the business case"],
+        cons:["Needs Tapestry time and data in Phase 0"]},
+      {k:"B", name:"Targets at kickoff, no baseline", sum:"Agree target numbers at kickoff based on estimates.",
+        pros:["Quick"],
+        cons:["Targets are guesses","Results are harder to defend"]},
+      {k:"C", name:"Qualitative rubric only", sum:"Reviewers score drafts against a rubric. No time measures.",
+        pros:["Light"],
+        cons:["Weak evidence for funding a rollout"]}
+    ]},
+  { id:"D11", group:"Technology", title:"Tech-stack baseline",
+    question:"What technology baseline should the architecture start from?",
+    why:"The team knows Angular, Spring Boot and GCP. The stack also has to fit the security posture (D3) and the solution path (D2).",
+    deps:["D3","D2"], rec:"A",
+    note:"Before committing, verify the current FedRAMP, IL and ITAR authorisation of every chosen service and model inside the required boundary. Don't assume any of them.",
+    options:[
+      {k:"A", name:"Team stack", sum:"Angular UI · Spring Boot with Spring AI · PostgreSQL with pgvector and full-text search · Vertex AI models (Claude or Gemini) · Document AI for OCR · Cloud Storage · workflow state in the database, with Temporal if durability needs grow.",
+        pros:["Uses existing skills","One language for the core","Hybrid search in one database"],
+        cons:["Smaller AI ecosystem in Java than in Python"]},
+      {k:"B", name:"Spring Boot core + Python AI service", sum:"Spring Boot for workflow and governance. A Python service (LangGraph) for extraction, retrieval and agent logic.",
+        pros:["Richer AI libraries","Matches most AI examples"],
+        cons:["Two languages and services to run","More integration and security surface"]},
+      {k:"C", name:"Managed GCP AI services", sum:"Vertex AI Search for retrieval and Agent Engine for orchestration, with a thin app on top.",
+        pros:["Fastest retrieval setup","Managed scaling"],
+        cons:["Less control over governance filters and citations","Platform lock-in","Availability inside the required boundary must be checked"]}
+    ]}
+];
+
+const BY_ID = Object.fromEntries(DECISIONS.map(d => [d.id, d]));
+const STATE_LABEL = { open:"Open", leaning:"Leaning", agreed:"Agreed" };
+const LS_KEY = "tapestry-decision-board-v1";
+
+let db = null, user = null;
+const S = { mode:"loading", me:null, canWrite:true, reviews:{}, status:{}, profiles:{}, filter:"all" };
+let MY = { picks:{}, notes:{} };
+let writing = false, again = false, noteTimer = null, dirty = false;
+const cards = {};
+
+/* ---------- small helpers ---------- */
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})){
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()){
+    if (kid == null || kid === false) continue;
+    n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return n;
+}
+function lsRead(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch(e){ return null; } }
+function lsWrite(v){ try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch(e){} }
+function meKey(){ return S.me || "local"; }
+function enabled(){ return (S.mode === "shared" && S.canWrite) || S.mode === "local"; }
+function nameOf(id){
+  if (!id) return "Someone";
+  if (id === meKey()) return "You";
+  const p = S.profiles[id];
+  return (p && p.name) || "Reviewer";
+}
+function colorOf(id){
+  const p = S.profiles[id];
+  return (p && p.color) || null;
+}
+let toastTimer = null;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+/* ---------- build static decision cards ---------- */
+function buildCard(d){
+  const card = el("article", { class:"dec", id:d.id.toLowerCase(), "data-id":d.id });
+
+  const pill = el("span", { class:"pill", "data-state":"open" }, "Open");
+  card.append(el("div", { class:"dec-head" },
+    el("div", { class:"dec-id" }, d.id),
+    el("div", { class:"dec-titles" }, el("div", { class:"eyebrow" }, d.group), el("h3", {}, d.title)),
+    pill
+  ));
+  card.append(el("p", { class:"dec-q" }, d.question));
+  card.append(el("p", { class:"dec-why" }, el("strong", {}, "Why it matters. "), d.why));
+
+  const meta = el("div", { class:"dec-meta" });
+  if (d.deps.length){
+    meta.append(el("span", {}, "Depends on"));
+    d.deps.forEach(x => meta.append(el("a", { href:"#" + x.toLowerCase() }, x)));
+  } else {
+    meta.append(el("span", {}, "No dependencies"));
+  }
+  const recOpt = d.options.find(o => o.k === d.rec);
+  if (recOpt) meta.append(el("span", {}, "· Suggested: " + recOpt.k + ". " + recOpt.name));
+  card.append(meta);
+
+  if (d.note) card.append(el("p", { class:"dec-note" }, d.note));
+
+  const optsBox = el("div", { class:"opts" });
+  const optRefs = {};
+  d.options.forEach(o => {
+    const pickers = el("div", { class:"pickers" });
+    const btn = el("button", { class:"pick", type:"button", "aria-pressed":"false",
+      "aria-label":"Choose option " + o.k + " for " + d.id,
+      onclick:(e) => { e.stopPropagation(); choose(d.id, o.k); } }, "Choose " + o.k);
+    const tile = el("div", { class:"opt", "data-opt":o.k },
+      el("div", { class:"opt-head" },
+        el("span", { class:"opt-k" }, o.k),
+        el("span", { class:"opt-name" }, o.name),
+        o.k === d.rec ? el("span", { class:"rec" }, "Suggested") : null,
+        el("span", { class:"outcome-tag" }, "Team outcome")
+      ),
+      el("p", { class:"opt-sum" }, o.sum),
+      el("ul", { class:"pc" },
+        o.pros.map(p => el("li", { class:"pro" }, p)),
+        o.cons.map(c => el("li", { class:"con" }, c))
+      ),
+      el("div", { class:"opt-foot" }, pickers, btn)
+    );
+    tile.addEventListener("click", (e) => {
+      if (e.target.closest("button,a,select,textarea")) return;
+      if (window.getSelection && String(window.getSelection()).length) return;
+      choose(d.id, o.k);
+    });
+    optRefs[o.k] = { tile, pickers, btn };
+    optsBox.append(tile);
+  });
+  card.append(optsBox);
+
+  const segBtns = {};
+  const seg = el("div", { class:"seg", role:"group", "aria-label":"Team status for " + d.id },
+    ["open","leaning","agreed"].map(s => {
+      const b = el("button", { type:"button", "data-state":s, "aria-pressed":"false", onclick:() => setStatus(d.id, s) }, STATE_LABEL[s]);
+      segBtns[s] = b; return b;
+    })
+  );
+  const sel = el("select", { id:"outcome-" + d.id, "aria-label":"Team outcome for " + d.id, onchange:(e) => setOutcome(d.id, e.target.value) },
+    el("option", { value:"" }, "No outcome yet"),
+    d.options.map(o => el("option", { value:o.k }, o.k + ". " + o.name))
+  );
+  const byline = el("span", { class:"byline" });
+  card.append(el("div", { class:"team" }, el("label", {}, "Team status"), seg, sel, byline));
+
+  const ta = el("textarea", { id:"note-" + d.id, placeholder:"Your reasoning, concerns or conditions (optional)" });
+  ta.addEventListener("input", () => {
+    if (!enabled()) return;
+    MY.notes[d.id] = ta.value;
+    dirty = true;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { noteTimer = null; saveMine(); }, 900);
+  });
+  ta.addEventListener("blur", () => {
+    if (noteTimer){ clearTimeout(noteTimer); noteTimer = null; saveMine(); }
+  });
+  const others = el("ul", { class:"others" });
+  card.append(el("div", { class:"notes" }, el("label", { for:"note-" + d.id }, "Your note"), ta, others));
+
+  cards[d.id] = { card, pill, optRefs, segBtns, sel, byline, ta, others };
+  return card;
+}
+
+/* ---------- actions ---------- */
+function choose(id, k){
+  if (!enabled()) return;
+  if (MY.picks[id] === k) delete MY.picks[id]; else MY.picks[id] = k;
+  dirty = true;
+  saveMine();
+  paint();
+}
+function setStatus(id, s){
+  if (!enabled()) return;
+  const cur = S.status[id] || {};
+  let option = cur.option || "";
+  if (s === "open") option = "";
+  else if (!option) option = MY.picks[id] || BY_ID[id].rec || "";
+  writeStatus(id, { state:s, option });
+}
+function setOutcome(id, v){
+  if (!enabled()) return;
+  const cur = S.status[id] || { state:"open" };
+  let state = cur.state || "open";
+  if (v && state === "open") state = "leaning";
+  if (!v) state = "open";
+  writeStatus(id, { state, option:v });
+}
+
+/* ---------- persistence ---------- */
+function persistLocal(){ lsWrite({ mine:MY, status:S.status }); }
+
+async function saveMine(){
+  if (S.mode === "local"){ persistLocal(); dirty = false; return; }
+  if (S.mode !== "shared" || !S.canWrite) return;
+  if (writing){ again = true; return; }
+  writing = true;
+  try {
+    do {
+      again = false;
+      const body = { picks:Object.assign({}, MY.picks), notes:Object.assign({}, MY.notes), updatedAt:new Date().toISOString() };
+      await setWithRetry(db.doc("reviews/" + S.me), body);
+    } while (again);
+    dirty = false;
+  } catch(e){
+    onWriteError(e);
+  } finally {
+    writing = false;
+  }
+}
+
+const statusChains = {};
+function writeStatus(id, partial){
+  const body = { state:partial.state, option:partial.option || "", by:meKey(), at:new Date().toISOString() };
+  S.status = Object.assign({}, S.status, { [id]:body });
+  paint();
+  if (S.mode === "local"){ persistLocal(); return; }
+  if (S.mode !== "shared" || !S.canWrite) return;
+  statusChains[id] = (statusChains[id] || Promise.resolve())
+    .then(() => setWithRetry(db.doc("status/" + id), body))
+    .catch(onWriteError);
+}
+
+async function setWithRetry(ref, body){
+  try { await ref.set(body); }
+  catch(e){
+    if (e && e.code === "unavailable"){
+      await new Promise(r => setTimeout(r, 400 + Math.random() * 600));
+      await ref.set(body);
+    } else { throw e; }
+  }
+}
+
+function onWriteError(e){
+  const code = e && e.code;
+  if (code === "invalid_argument" || code === "not_granted"){
+    S.canWrite = false; S.mode = "readonly"; showMode(); paint();
+  } else if (code === "quota_exceeded"){
+    toast("The board's storage is full, so this change wasn't saved.");
+  } else if (code === "revoked"){
+    S.mode = "readonly"; S.canWrite = false; showMode(); paint();
+  } else {
+    toast("That change didn't save. Check your connection and try again.");
+  }
+}
+
+function syncMineFromRemote(){
+  if (writing || noteTimer || dirty) return;
+  const d = S.reviews[S.me];
+  if (!d) return;
+  MY = { picks:Object.assign({}, d.picks || {}), notes:Object.assign({}, d.notes || {}) };
+}
+
+/* ---------- rendering ---------- */
+function combinedReviews(){
+  const r = Object.assign({}, S.reviews);
+  r[meKey()] = MY;
+  return r;
+}
+function statusOf(id){
+  const s = S.status[id];
+  return (s && STATE_LABEL[s.state]) ? s : { state:"open", option:"" };
+}
+
+async function paint(){
+  if (user && S.mode !== "local"){
+    const ids = new Set(Object.keys(S.reviews));
+    Object.values(S.status).forEach(s => { if (s && s.by) ids.add(s.by); });
+    ids.delete("local");
+    if (ids.size){
+      try { S.profiles = await user.profiles([...ids]); } catch(e){}
+    }
+  }
+  paintSync();
+}
+
+function chip(id){
+  const c = colorOf(id);
+  const dot = el("i", {});
+  if (c) dot.style.background = c;
+  return el("span", { class:"who" }, dot, nameOf(id));
+}
+
+function paintSync(){
+  const reviews = combinedReviews();
+  const counts = { open:0, leaning:0, agreed:0 };
+  const can = enabled();
+
+  DECISIONS.forEach(d => {
+    const c = cards[d.id];
+    const st = statusOf(d.id);
+    counts[st.state]++;
+    c.card.dataset.state = st.state;
+    c.pill.dataset.state = st.state;
+    c.pill.textContent = STATE_LABEL[st.state];
+
+    Object.entries(c.segBtns).forEach(([s, b]) => {
+      b.setAttribute("aria-pressed", String(st.state === s));
+      b.disabled = !can;
+    });
+    c.sel.value = st.option || "";
+    c.sel.disabled = !can;
+    c.byline.textContent = (st.state !== "open" && st.by) ? "Set by " + nameOf(st.by) : "";
+
+    d.options.forEach(o => {
+      const r = c.optRefs[o.k];
+      const who = Object.keys(reviews).filter(u => reviews[u] && reviews[u].picks && reviews[u].picks[d.id] === o.k);
+      r.pickers.replaceChildren(...(who.length ? who.map(chip) : [el("span", { class:"nopick" }, "No picks yet")]));
+      const mine = MY.picks[d.id] === o.k;
+      r.tile.classList.toggle("mine", mine);
+      r.tile.classList.toggle("locked", !can);
+      r.tile.classList.toggle("outcome", st.state !== "open" && st.option === o.k);
+      r.tile.dataset.state = st.state;
+      r.btn.textContent = mine ? "Your pick ✓" : "Choose " + o.k;
+      r.btn.setAttribute("aria-pressed", String(mine));
+      r.btn.disabled = !can;
+    });
+
+    if (document.activeElement !== c.ta){
+      const v = MY.notes[d.id] || "";
+      if (c.ta.value !== v) c.ta.value = v;
+    }
+    c.ta.disabled = !can;
+
+    const others = Object.keys(S.reviews).filter(u => u !== meKey() && S.reviews[u].notes && String(S.reviews[u].notes[d.id] || "").trim());
+    c.others.replaceChildren(...others.map(u => {
+      const li = el("li", {});
+      li.append(el("strong", {}, nameOf(u) + ":"), document.createTextNode(String(S.reviews[u].notes[d.id])));
+      return li;
+    }));
+
+    c.card.hidden = S.filter !== "all" && st.state !== S.filter;
+  });
+
+  document.getElementById("nOpen").textContent = counts.open;
+  document.getElementById("nLeaning").textContent = counts.leaning;
+  document.getElementById("nAgreed").textContent = counts.agreed;
+  document.getElementById("fAll").textContent = DECISIONS.length;
+  document.getElementById("fOpen").textContent = counts.open;
+  document.getElementById("fLeaning").textContent = counts.leaning;
+  document.getElementById("fAgreed").textContent = counts.agreed;
+
+  const active = Object.keys(reviews).filter(u => {
+    const r = reviews[u];
+    return r && (Object.keys(r.picks || {}).length || Object.values(r.notes || {}).some(n => String(n).trim()));
+  });
+  const rv = document.getElementById("reviewers");
+  rv.textContent = active.length ? "Views recorded by: " + active.map(nameOf).join(", ") : "No one has recorded a view yet.";
+}
+
+function showMode(){
+  const sync = document.getElementById("sync");
+  const banner = document.getElementById("banner");
+  sync.dataset.mode = S.mode;
+  if (S.mode === "shared"){
+    sync.textContent = "Shared: everyone with access sees picks and notes";
+    banner.hidden = true;
+  } else if (S.mode === "readonly"){
+    sync.textContent = "View only";
+    banner.textContent = "You can read this board but can't record a view. Ask the owner to give you Contributor access.";
+    banner.hidden = false;
+  } else if (S.mode === "local"){
+    sync.textContent = "Saved in this browser only";
+    banner.textContent = "Shared saving isn't available here, so your picks and notes are kept only in this browser. Use “Copy decisions summary” to share them.";
+    banner.hidden = false;
+  } else {
+    sync.textContent = "Connecting to shared notes…";
+    banner.hidden = true;
+  }
+}
+
+/* ---------- summary ---------- */
+function esc(s){ return String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " "); }
+function buildSummary(){
+  const reviews = combinedReviews();
+  const date = new Date().toISOString().slice(0, 10);
+  const lines = [];
+  lines.push("# Tapestry decision board: summary");
+  lines.push("_Exported " + date + ". Nothing is final until marked Agreed._");
+  lines.push("");
+  lines.push("| ID | Decision | Status | Outcome | Picks |");
+  lines.push("|---|---|---|---|---|");
+  DECISIONS.forEach(d => {
+    const st = statusOf(d.id);
+    const opt = d.options.find(o => o.k === st.option);
+    const picks = d.options.map(o => {
+      const who = Object.keys(reviews).filter(u => reviews[u] && reviews[u].picks && reviews[u].picks[d.id] === o.k).map(nameOf);
+      return who.length ? o.k + ": " + who.join(", ") : null;
+    }).filter(Boolean).join(" · ") || "none";
+    lines.push("| " + d.id + " | " + esc(d.title) + " | " + STATE_LABEL[st.state] + " | " + (opt ? esc(opt.k + ". " + opt.name) : "n/a") + " | " + esc(picks) + " |");
+  });
+  const noteLines = [];
+  DECISIONS.forEach(d => {
+    const ns = Object.keys(reviews).filter(u => reviews[u] && reviews[u].notes && String(reviews[u].notes[d.id] || "").trim());
+    if (!ns.length) return;
+    noteLines.push("");
+    noteLines.push("**" + d.id + " · " + d.title + "**");
+    ns.forEach(u => noteLines.push("- " + nameOf(u) + ": " + String(reviews[u].notes[d.id]).replace(/\r?\n/g, " ")));
+  });
+  if (noteLines.length){ lines.push(""); lines.push("## Notes"); lines.push(...noteLines); }
+  return lines.join("\n");
+}
+
+/* ---------- wiring ---------- */
+document.getElementById("decs").append(...DECISIONS.map(buildCard));
+
+document.querySelectorAll(".chip[data-filter]").forEach(b => {
+  b.addEventListener("click", () => {
+    S.filter = b.dataset.filter;
+    document.querySelectorAll(".chip[data-filter]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    paintSync();
+  });
+});
+
+document.getElementById("copyBtn").addEventListener("click", () => {
+  const md = buildSummary();
+  const fb = document.getElementById("fallback");
+  const showFallback = () => {
+    const ta = document.getElementById("fallbackText");
+    ta.value = md; fb.hidden = false; ta.focus(); ta.select();
+  };
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText){ showFallback(); return; }
+    navigator.clipboard.writeText(md).then(() => { fb.hidden = true; toast("Summary copied. Paste it into Claude, an email or a doc."); }, showFallback);
+  } catch(e){ showFallback(); }
+});
+document.getElementById("fallbackClose").addEventListener("click", () => { document.getElementById("fallback").hidden = true; });
+
+showMode();
+paintSync();
+
+function goLocal(){
+  const saved = lsRead();
+  if (saved){
+    MY = { picks:Object.assign({}, (saved.mine && saved.mine.picks) || {}), notes:Object.assign({}, (saved.mine && saved.mine.notes) || {}) };
+    S.status = Object.assign({}, saved.status || {});
+  }
+  S.mode = "local";
+  showMode(); paintSync();
+}
+
+(async function init(){
+  const c = window.claude;
+  if (!c || typeof c.use !== "function"){ goLocal(); return; }
+  let u = null, d = null;
+  try { [u, d] = await Promise.all([c.use("user"), c.use("db")]); } catch(e){}
+  user = u; db = d;
+  if (!db || !user){ goLocal(); return; }
+  try { S.me = await user.id(); } catch(e){ S.me = null; }
+  if (!S.me){ goLocal(); return; }
+  let can = null;
+  try { can = await user.can("data.write"); } catch(e){}
+  S.canWrite = can !== false;
+  S.mode = S.canWrite ? "shared" : "readonly";
+  showMode();
+
+  db.collection("reviews").onSnapshot(snap => {
+    const r = {};
+    snap.docs.forEach(x => { if (x.exists) r[x.id] = x.data(); });
+    S.reviews = r;
+    syncMineFromRemote();
+    paint();
+  }, onSubError);
+  db.collection("status").onSnapshot(snap => {
+    const s = {};
+    snap.docs.forEach(x => { if (x.exists) s[x.id] = x.data(); });
+    S.status = s;
+    paint();
+  }, onSubError);
+})();
+
+function onSubError(e){
+  if (e && e.code === "revoked"){ S.mode = "readonly"; S.canWrite = false; showMode(); paintSync(); return; }
+  toast("Live updates paused. Reload the page to reconnect.");
+}
+})();
+</script>
+
+</body>
+
+</html>
